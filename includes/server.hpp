@@ -16,6 +16,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "user.hpp"
+
 #define MAX_CLIENTS 10
 #define BACK_LOG 10
 #define BUFF_SIZE 1024
@@ -32,7 +34,7 @@ class Server
             int                         _nb_user;
             char                        _buffer[1024];
             std::string                 _password;
-            std::vector<int>            _users;
+            std::vector<User>           _users;
 
             fd_set                      _read;
             fd_set                      _write;
@@ -48,7 +50,7 @@ class Server
             int                         get_port(void) const;
             int                         get_nb_user(void) const;
             std::string                 get_password(void) const;
-            std::vector<int>    get_users(void) const;
+            std::vector<User>           get_users(void) const;
 
             //Socket
             int                         bind_sock(void);          
@@ -63,6 +65,7 @@ class Server
             int                         manage_connections(void);
             //Print
             void                        print_buff(void) const;
+            void                        print_users(void) const;
             
     };
 

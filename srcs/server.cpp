@@ -26,7 +26,7 @@ int                         Server::get_socket(void) const { return _socket; }
 int                         Server::get_port(void) const { return _port; }
 int                         Server::get_nb_user(void) const { return _nb_user; }
 std::string                 Server::get_password(void) const { return _password; }
-std::vector<int>            Server::get_users(void) const { return _users; }
+std::vector<User>           Server::get_users(void) const { return _users; }
 
 //Methods
 int                         Server::bind_sock(void)
@@ -71,9 +71,9 @@ int                         Server::set_fds(void)
     FD_SET(_socket, &_except);
     for (int i = 0; i < _nb_user; i++)
     {
-        FD_SET(_users[i], &_read);
-        FD_SET(_users[i], &_write);
-        FD_SET(_users[i], &_except);
+        FD_SET(_users[i].get_socket(), &_read);
+        FD_SET(_users[i].get_socket(), &_write);
+        FD_SET(_users[i].get_socket(), &_except);
     }
     return (0);
 }
@@ -90,10 +90,12 @@ int                         Server::new_connection(void)
     int new_fd = 0;
     if (FD_ISSET(_socket, &_read)) //--->If listening socket is readable--->New connection
     {
-        std::cout << "New connection to server!\n";
+        std::cout << "New connection confirmed\n";
         new_fd = accept_sock();
-        _users.push_back(new_fd);
+        _users.push_back(User(new_fd, ""));
         _nb_user++;
+
+        recv_sock(new_fd);
     }
     return new_fd;
 }
@@ -101,20 +103,20 @@ int                         Server::new_connection(void)
 int                         Server::manage_connections(void)
 {
     for (int i = 0; i < _nb_user; i++)
+    {
+        if (FD_ISSET(_users[i].get_socket(), &_read))
         {
-            if (FD_ISSET(_users[i], &_read))
+            if (recv(_users[i].get_socket(), _buffer, BUFF_SIZE, 0) < 0)
             {
-                if (recv(_users[i], _buffer, BUFF_SIZE, 0) < 0)
-                {
-                    perror("Failed to receive message from existing client\n");
-                    exit(EXIT_FAILURE);
-                }
-                std::cout << "Message received by user fd[" << i << "]" << std::endl;
-                std::cout << _buffer << std::endl;
-                bzero(_buffer, 1024);
-            }        
-        }
-        return 0;
+                std::cout << "Failed to receive message from existing client\n";
+                return -1;
+            }
+            std::cout << "Message received by user fd[" << i << "]" << std::endl;
+            std::cout << _buffer << std::endl;
+            bzero(_buffer, 1024);
+        }        
+    }
+    return 0;
 }
 
 //--------------------------------------------------------->Display
@@ -122,3 +124,12 @@ void                         Server::print_buff(void) const
 {
     std::cout << _buffer << std::endl;
 }
+
+void                          Server::print_users(void) const
+{
+    for (auto it = _users.begin(); it != _users.end(); it++)
+    {
+        (*it).display_user();
+    }
+}
+

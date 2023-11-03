@@ -7,8 +7,8 @@ int main(int ac, char **av)
 
     if (ac != 2)
     {
-        perror("Wrong number of argument\n");
-        exit(EXIT_FAILURE);
+        std::cout << "Wrong number of argument\n";
+        return (-1);
     }
     //Welcome to our IRC server
     std::cout << "Welcome to our IRC server" << std::endl;
@@ -22,18 +22,21 @@ int main(int ac, char **av)
     IRC.listen_sock();
 
     on = 1;
-    while (on)
-    {
+ //   while (on)
+ //   {
         IRC.set_fds();
         IRC.select_sock();
-        user = IRC.new_connection();
 
-        
+        user = IRC.new_connection();
+  //    IRC.manage_connections();
+
         
         IRC.recv_sock(user);
         IRC.print_buff();
+
+        IRC.print_users();
         usleep(5000);
-    }
+//  }
 
     //    std::cout << IRC.get_socket() << std::endl;
     //    std::cout << IRC.get_port() << std::endl;
