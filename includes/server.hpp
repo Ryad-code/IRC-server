@@ -37,7 +37,7 @@ class Server
             int                         _nb_user;
             char                        _buffer[1024];
             std::string                 _password;
-            std::vector<User>           _users;
+            std::vector<User*>           _users;
             std::vector<Channel>        _channels;
 
             fd_set                      _read;
@@ -54,10 +54,8 @@ class Server
             int                        get_port(void) const;
             int                        get_nb_user(void) const;
             std::string                get_password(void) const;
-            
-            std::vector<User>          get_users(void) const;
+            std::vector<User*>         get_users(void) const;
             User*                      get_user(std::string name);
-
             std::vector<Channel>       get_channels(void) const;
             Channel*                   get_channel(std::string name);
 
@@ -81,7 +79,7 @@ class Server
             int                         send_to_all_users(std::string message);
             int                         send_to_users(int fd, std::string message);
             //Channels
-            int                         add_user_to_channel(User user, std::string channel);
+            int                         add_user_to_channel(User* user, std::string channel);
             int                         send_to_channel(int sender, std::string channel, std::string message);
             //Print
             void                        print_buff(void) const;

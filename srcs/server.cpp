@@ -28,14 +28,14 @@ int                        Server::get_port(void) const { return _port; }
 int                        Server::get_nb_user(void) const { return _nb_user; }
 std::string                Server::get_password(void) const { return _password; }
 
-std::vector<User>           Server::get_users(void) const { return _users; }
+std::vector<User*>           Server::get_users(void) const { return _users; }
 User*                       Server::get_user(std::string name)
 {
 
-    for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); it++)
+    for (std::vector<User*>::iterator it = _users.begin(); it != _users.end(); it++)
     {
-        if ((*it).get_name() == name)
-            return &(*it);
+        if ((*it)->get_name() == name)
+            return (*it);
     }
     return NULL;
 }
@@ -94,9 +94,9 @@ int                         Server::set_fds(void)
     FD_SET(_socket, &_except);
     for (int i = 0; i < _nb_user; i++)
     {
-        FD_SET(_users[i].get_socket(), &_read);
-        FD_SET(_users[i].get_socket(), &_write);
-        FD_SET(_users[i].get_socket(), &_except);
+        FD_SET(_users[i]->get_socket(), &_read);
+        FD_SET(_users[i]->get_socket(), &_write);
+        FD_SET(_users[i]->get_socket(), &_except);
     }
     return (0);
 }
@@ -109,15 +109,17 @@ int                         Server::select_sock(void)
 
 int                         Server::new_connection(void)
 {
-    int new_fd = 0;
+    int     new_fd = 0;
+    User*   new_user;
     if (FD_ISSET(_socket, &_read)) //--->If listening socket is readable--->New connection
     {
         std::cout << "New connection to server" << std::endl;
         new_fd = accept_sock();
-        _users.push_back(User(new_fd, ""));//----->Creation of new user
+        new_user = new User(new_fd, "alfred");
+        _users.push_back(new_user);//---------------->Creation of new user
         _nb_user++;
-        add_user_to_channel(_users[_nb_user], "Main");
-        recv_sock(new_fd, _users[_nb_user -1].get_buffer());//---------------------->receiving message from new user in new user's buffer
+        add_user_to_channel(new_user, "Main");//----->Adding new user to Main channel
+        recv_sock(new_fd, _users[_nb_user -1]->get_buffer());
     }
     return new_fd;
 }
@@ -126,16 +128,16 @@ int                         Server::manage_connections(void)
 {
     for (int i = 0; i < _nb_user; i++)
     {
-        if (FD_ISSET(_users[i].get_socket(), &_read))//---->If an existing user is readable
+        if (FD_ISSET(_users[i]->get_socket(), &_read))//---->If an existing user is readable
         {
-            if (recv(_users[i].get_socket(), _users[i].get_buffer(), BUFF_SIZE, 0) < 0)//Receiving his message
+            if (recv(_users[i]->get_socket(), _users[i]->get_buffer(), BUFF_SIZE, 0) < 0)
             {
                 std::cout << "Failed to receive message from existing client\n";
                 return -1;
             }
             std::cout << "FD[" << i << "]:" << std::endl;//----->Display new user message
-            std::cout << _users[i].get_buffer() << std::endl;
-            if ((_users[i].get_buffer())[0] == 'E' && (_users[i].get_buffer())[1] == 'X' && (_users[i].get_buffer())[2])
+            std::cout << _users[i]->get_buffer() << std::endl;
+            if ((_users[i]->get_buffer())[0] == 'E' && (_users[i]->get_buffer())[1] == 'X' && (_users[i]->get_buffer())[2])
                 return -1;
         }        
     }
@@ -150,18 +152,18 @@ void                         Server::clean_buffer(void)
 
 void                         Server::clean_users_buffer(void)
 {
-    for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); it++)
+    for (std::vector<User*>::iterator it = _users.begin(); it != _users.end(); it++)
     {
-        (*it).clean_buffer();
+        (*it)->clean_buffer();
     }
 }
 //...........................................................Sending
 int                          Server::send_to_all_users(std::string message)
 {
-    for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); it++)
+    for (std::vector<User*>::iterator it = _users.begin(); it != _users.end(); it++)
     {
         std::cout << "Sending to all users" << std::endl;
-        send_sock((*it).get_socket(), message);
+        send_sock((*it)->get_socket(), message);
     }
     return 0;  
 }
@@ -169,19 +171,19 @@ int                          Server::send_to_all_users(std::string message)
 int                     Server::send_to_channel(int sender, std::string channel, std::string message)
 {
     Channel* tmp_channel = get_channel(channel);
-    std::vector<User> tmp_users =  tmp_channel->get_users();
-    for (std::vector<User>::iterator it = tmp_channel->get_users().begin(); it != tmp_channel->get_users().end(); it++)
+    std::vector<User*> tmp_users =  tmp_channel->get_users();
+    for (std::vector<User*>::iterator it = tmp_channel->get_users().begin(); it != tmp_channel->get_users().end(); it++)
     {
-        if ((*it).get_socket() != sender)
+        if ((*it)->get_socket() != sender)
         {
-            write((*it).get_socket(), message.c_str(), strlen(message.c_str()));
+            write((*it)->get_socket(), message.c_str(), strlen(message.c_str()));
         }
     }
     return 0;
 }
 
 //.........................................................Channels
-int                          Server::add_user_to_channel(User user, std::string channel)
+int                          Server::add_user_to_channel(User* user, std::string channel)
 {
     for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
     {
@@ -201,14 +203,17 @@ void                         Server::print_buff(void) const
 
 void                          Server::print_users(void)
 {
-    for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); it++)
+    for (std::vector<User*>::iterator it = _users.begin(); it != _users.end(); it++)
     {
-        std::cout << "Name: " << (*it).get_name() << " | " << "Fd: " << (*it).get_socket() << " |" << std::endl;
+        std::cout << "Name: " << (*it)->get_name() << " | " << "Fd: " << (*it)->get_socket() << " |" << std::endl;
     }
 }
 
 void                          Server::print_users_from_channel(std::string channel)
 {
         Channel* tmp_channel = get_channel(channel);
-        tmp_channel->display_users();
+        if (tmp_channel)
+            tmp_channel->display_users();
+        else
+            std::cout << "No such channel" << std::endl;
 }

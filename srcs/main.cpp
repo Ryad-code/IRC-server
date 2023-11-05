@@ -4,6 +4,7 @@ int main(int ac, char **av)
 {
     int user = 0;
     int res;
+    std::string s = "Main";
 
     if (ac != 2)
     {
@@ -37,7 +38,10 @@ int main(int ac, char **av)
             on++;
         }
     }
-    std::cout << "VOILA ta grand mere la pute" << std::endl;
+    IRC.print_users();
+    std::cout << std::endl;
+    IRC.print_users_from_channel(s);
+    std::cout << "END" << std::endl;
 
     return 0;
 }
