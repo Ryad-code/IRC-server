@@ -25,9 +25,12 @@ class User
             int                         get_socket(void) const;
             std::string                 get_name(void) const;
             int                         get_status(void) const;
+            char                        *get_buffer(void);
 
             //Printing
             void                        display_user(void) const;
+            //Buffer
+            void                        clean_buffer(void);
 };
 
 #endif
